@@ -21,6 +21,9 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 
 data class RelatorioESG(val empresa: String, val categoria: String, val pontuacao: Int, val detalhes: String)
 
@@ -59,6 +62,23 @@ fun LoginScreen(navController: NavController, onLoginSuccess: () -> Unit, relato
     var senha by rememberSaveable { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) } // Estado para mostrar mensagem de erro
 
+    val image = painterResource(id = R.drawable.marineclean)
+
+    Box( // Use um Box para sobrepor a imagem aos campos de entrada
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.TopCenter // Alinha a imagem ao topo
+    ) {
+        Image(
+            painter = image,
+            contentDescription = "Logo", // Descrição da imagem para acessibilidade
+            modifier = Modifier
+                .fillMaxWidth() // A imagem preenche a largura da tela
+                .height(150.dp), // Ajuste a altura conforme necessário
+            contentScale = ContentScale.Fit // A imagem se ajusta sem distorção
+        )
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
