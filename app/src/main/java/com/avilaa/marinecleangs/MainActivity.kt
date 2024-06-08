@@ -22,6 +22,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
 
@@ -47,11 +51,24 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation(relatoriosExemplo: MutableList<RelatorioESG>) {
     val navController = rememberNavController()
     var isLoggedIn by rememberSaveable { mutableStateOf(false) }
+    var showFeatureSelection by rememberSaveable { mutableStateOf(false) }
 
-    NavHost(navController = navController, startDestination = if (isLoggedIn) "home" else "login") {
-        composable("login") { LoginScreen(navController, onLoginSuccess = { isLoggedIn = true }, relatoriosExemplo) }
+    NavHost(navController = navController, startDestination = if (isLoggedIn) "feature_selection" else "login") {
+        composable("login") { LoginScreen(navController, onLoginSuccess = {
+            isLoggedIn = true
+            showFeatureSelection = true
+        }, relatoriosExemplo) }
         composable("register") { RegisterScreen(navController) }
         composable("home") { HomeScreen(relatoriosExemplo, onLogout = { isLoggedIn = false }) }
+        composable("feature_selection") { FeatureSelectionScreen(navController, onFeatureSelected = { feature ->
+            if (feature == "relatorios") {
+                navController.navigate("home")
+            } else if (feature == "campanha") {
+                navController.navigate("campanha")
+            }
+            showFeatureSelection = false
+        }) }
+        composable("campanha") { CampanhaScreen(onLogout = { isLoggedIn = false }) } // Nova tela de campanha
     }
 }
 
@@ -60,23 +77,23 @@ fun AppNavigation(relatoriosExemplo: MutableList<RelatorioESG>) {
 fun LoginScreen(navController: NavController, onLoginSuccess: () -> Unit, relatoriosExemplo: MutableList<RelatorioESG>) {
     var email by rememberSaveable { mutableStateOf("") }
     var senha by rememberSaveable { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) } // Estado para mostrar mensagem de erro
+    var showError by remember { mutableStateOf(false) }
 
     val image = painterResource(id = R.drawable.marineclean)
 
-    Box( // Use um Box para sobrepor a imagem aos campos de entrada
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        contentAlignment = Alignment.TopCenter // Alinha a imagem ao topo
+        contentAlignment = Alignment.TopCenter
     ) {
         Image(
             painter = image,
-            contentDescription = "Logo", // Descrição da imagem para acessibilidade
+            contentDescription = "Logo",
             modifier = Modifier
-                .fillMaxWidth() // A imagem preenche a largura da tela
-                .height(150.dp), // Ajuste a altura conforme necessário
-            contentScale = ContentScale.Fit // A imagem se ajusta sem distorção
+                .fillMaxWidth()
+                .height(150.dp),
+            contentScale = ContentScale.Fit
         )
     }
     Column(
@@ -325,7 +342,113 @@ fun RelatorioItem(relatorio: RelatorioESG, onClick: () -> Unit) {
             Text(text = relatorio.empresa, style = MaterialTheme.typography.headlineSmall)
             Text(text = "Categoria: ${relatorio.categoria}")
             Text(text = "Pontuação: ${relatorio.pontuacao}")
-            // ... (botões de download/compartilhamento - não funcionais neste protótipo)
+        }
+    }
+}
+
+@Composable
+fun FeatureSelectionScreen(navController: NavController, onFeatureSelected: (String) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Selecione a funcionalidade:",
+            style = MaterialTheme.typography.headlineSmall
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Button(onClick = { onFeatureSelected("relatorios") }) {
+                Text("Relatórios ESG")
+            }
+
+            Button(onClick = { onFeatureSelected("campanha") }) {
+                Text("Planejamento de Campanha")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CampanhaScreen(onLogout: () -> Unit) {
+    val campanhas = listOf(
+        Campanha("Limpeza da Praia do Leblon", "2024-06-15", "Rio de Janeiro"),
+        Campanha("Conscientização Ambiental na Paulista", "2024-07-05", "São Paulo"),
+        Campanha("Reflorestamento da Serra do Mar", "2024-08-22", "São Paulo"),
+        Campanha("Limpeza do Rio Tietê", "2024-09-12", "São Paulo")
+    ) // Dados mockados
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Planejamento de Campanha") },
+                actions = {
+                    IconButton(onClick = onLogout) {
+                        Icon(Icons.Filled.ExitToApp, contentDescription = "Logout")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn( // Usando LazyColumn para melhor performance com listas longas
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "Próximas Campanhas",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    campanhas.forEach { campanha ->
+                        CampanhaCard(campanha)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Classe de dados para representar uma campanha
+data class Campanha(val nome: String, val data: String, val local: String)
+
+// Cartão para exibir informações de uma campanha
+@Composable
+fun CampanhaCard(campanha: Campanha) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+        ) {
+            Text(text = campanha.nome, style = MaterialTheme.typography.headlineSmall)
+            Text(text = "Data: ${campanha.data}")
+            Text(text = "Local: ${campanha.local}")
+            // Adicione outros detalhes da campanha aqui, como número de voluntários, etc.
         }
     }
 }
